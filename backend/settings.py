@@ -69,6 +69,7 @@ GOOGLE_OAUTH_CLIENT_SECRET = os.getenv("GOOGLE_OAUTH_CLIENT_SECRET")
 GOOGLE_OAUTH_REDIRECT_URI = os.getenv("GOOGLE_OAUTH_REDIRECT_URI")
 GOOGLE_OAUTH_SCOPES = ["https://www.googleapis.com/auth/gmail.send"]
 
+FRONTEND_URL= os.getenv("FRONTEND_URL")
 
 print(">>>>>>>>...1",GOOGLE_OAUTH_CLIENT_ID)
 print(">>>>>>>>>>>>>>>2",GOOGLE_OAUTH_CLIENT_SECRET)

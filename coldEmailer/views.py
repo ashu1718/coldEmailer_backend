@@ -22,6 +22,7 @@ from .models import GmailCredentials
 from django.contrib.auth.models import User
 from rest_framework_simplejwt.authentication import JWTAuthentication
 import urllib.parse
+import json, base64
 class SignUpVIew(APIView):
     permission_classes= (AllowAny,)
 
@@ -48,21 +49,10 @@ class SignUpVIew(APIView):
 
 
 class GoogleLogin(APIView):
-    permission_classes = [AllowAny]    
+    permission_classes = [IsAuthenticated]    
 
     def get(self, request):
-        token = request.GET.get("token")
-        if not token:
-            return Response({"error": "Missing token"}, status=401)
-
-        jwt_auth = JWTAuthentication()
-        try:
-            validated_token = jwt_auth.get_validated_token(token)
-            user = jwt_auth.get_user(validated_token)
-            print(">>>>>>>>>>>.user",user)
-        except Exception:
-            return Response({"error": "Invalid or expired token"}, status=401)
-
+        user= request.user
         flow = Flow.from_client_config(
             {
                 "web": {
@@ -76,24 +66,27 @@ class GoogleLogin(APIView):
             redirect_uri=settings.GOOGLE_OAUTH_REDIRECT_URI,
         )
         print(">>>>>>>>>>>>>>>>>>flow",flow.__dict__)
-
+        state_data={"user_id": user.id}
+        encoded_state= base64.urlsafe_b64encode(json.dumps(state_data).encode()).decode()
         # store state in session
-        auth_url, state= flow.authorization_url(
+        auth_url, _ = flow.authorization_url(
             access_type="offline",
             include_granted_scopes="true",
-            prompt="consent"
+            prompt="consent",
+            state= encoded_state
         )
         print("req.user>>>>>>>>>>>>>>>>>>", request.user)
-        request.session["google_oauth_state"] = state
-        request.session["user_id"] = user.id
+        # request.session["google_oauth_state"] = state
+        # request.session["user_id"] = user.id
 
-        return redirect(auth_url)  
+        return Response({"auth_url" : auth_url }) 
 
 @api_view(['GET'])
 @permission_classes([AllowAny])   # Google callback is public
 def google_callback(request):
-    state = request.session.get("google_oauth_state")
-
+    state_param= request.GET.get("state")
+    state= json.loads(base64.urlsafe_b64decode(state_param).decode())
+    user_id= state.get("user_id")
     flow = Flow.from_client_config(
         {
             "web": {
@@ -104,15 +97,12 @@ def google_callback(request):
             }
         },
         scopes=["https://www.googleapis.com/auth/gmail.send"],
-        state=state,
         redirect_uri=settings.GOOGLE_OAUTH_REDIRECT_URI
     )
 
     flow.fetch_token(authorization_response=request.build_absolute_uri())
     creds = flow.credentials
-    print(">>>>>>>>>>>>>>>>>>req.sesion", request.session.__dict__)
-    # get logged-in user ID from session
-    user_id = request.session.get("user_id")
+    
     if not user_id:
         return Response({"error": "No user stored in session"}, status=400)
 
@@ -130,8 +120,8 @@ def google_callback(request):
             "expiry": creds.expiry,
         }
     )
-
-    return Response({"message": "Gmail connected successfully"})
+    redirect_url= f"{settings.FRONTEND_URL}/cold-email-form"
+    return redirect(redirect_url)
 
 class sendEmail(APIView):
     permission_classes= (IsAuthenticated,)
