@@ -1,0 +1,10 @@
+django
+# psycopg2-binary
+# psycopg2
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+google-auth
+google-auth-oauthlib
+google-api-python-client
+python-dotenv
