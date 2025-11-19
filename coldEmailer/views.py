@@ -147,16 +147,23 @@ class sendEmail(APIView):
         service = build("gmail", "v1", credentials=creds)
 
         # Build email message
-        message = MIMEText(request.data["body"])
-        message["to"] = request.data["to"]
-        message["subject"] = request.data["subject"]
+        recipients= request.data.get("to",[])
+        if not recipients:
+            return Response({"error" : "no recipient added"}, status=400)
+        results=[]
+        body=request.data.get("body")
+        for email in recipients:
 
-        raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
-        message_body = {"raw": raw}
+            message = MIMEText(body)
+            message["to"] = email
+            message["subject"] = request.data["subject"]
+            raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
+            message_body = {"raw": raw}
 
-        result = service.users().messages().send(
-            userId="me", body=message_body
-        ).execute()
+            result = service.users().messages().send(
+                userId="me", body=message_body
+            ).execute()
 
-        return Response({"status": "sent", "id": result["id"]})
+            results.append({"to": email, "id": result["id"]})
+        return Response({"status": "sent", "results": results})
         
