@@ -10,6 +10,7 @@ urlpatterns = [
             path('send-email/', views.sendEmail.as_view(), name="send-email"),
             path("google/login/",views.GoogleLogin.as_view(), name="google-login"),
             path("google/callback/", views.google_callback, name="google-callback"),
+            path('gmail-connection-status', views.getGmailConnectionStatus.as_view(), name="gmail-connection")
 
         ]
     )),

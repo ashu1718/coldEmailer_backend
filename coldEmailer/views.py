@@ -17,6 +17,9 @@ from google.oauth2.credentials import Credentials
 from datetime import datetime
 import base64
 from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+from email.mime.base import MIMEBase
+from email import encoders
 from googleapiclient.discovery import build
 from .models import GmailCredentials
 from django.contrib.auth.models import User
@@ -147,16 +150,32 @@ class sendEmail(APIView):
         service = build("gmail", "v1", credentials=creds)
 
         # Build email message
-        recipients= request.data.get("to",[])
+        recipients= request.POST.getlist("to")
         if not recipients:
             return Response({"error" : "no recipient added"}, status=400)
         results=[]
-        body=request.data.get("body")
+        body=request.POST.get("body")
+        subject= request.POST.get("subject")
+        file= request.FILES.get("file")
+        if file:
+            mime_part= MIMEBase('application', 'octet-stream')
+            mime_part.set_payload(file.read())
+            encoders.encode_base64(mime_part)
+            mime_part.add_header(
+                'content-disposition',
+                f'attachment; filename= "{file.name}"'
+            )
+
+        
         for email in recipients:
 
-            message = MIMEText(body)
+            message = MIMEMultipart()
             message["to"] = email
-            message["subject"] = request.data["subject"]
+            message["subject"] = subject
+            message.attach(MIMEText(body, "html"))
+            if file:
+                message.attach(mime_part)
+
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
             message_body = {"raw": raw}
 
@@ -167,3 +186,11 @@ class sendEmail(APIView):
             results.append({"to": email, "id": result["id"]})
         return Response({"status": "sent", "results": results})
         
+
+class getGmailConnectionStatus(APIView):
+    def get(self,request):
+        try:
+            connection_status= GmailCredentials.objects.filter(user=request.user).exists()
+            return Response({"gmail_connected" : connection_status},status=200)
+        except Exception as e:
+            return Response({"Error" : e},status=500)
