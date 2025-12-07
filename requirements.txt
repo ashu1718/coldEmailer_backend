@@ -1,6 +1,6 @@
 django
-# psycopg2-binary
-# psycopg2
+psycopg2-binary
+psycopg2
 djangorestframework
 djangorestframework-simplejwt
 django-cors-headers
