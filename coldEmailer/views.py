@@ -152,7 +152,7 @@ class sendEmail(APIView):
 
         # Build email message
         raw_to = request.POST.get("to", "")
-        if not recipients:
+        if not raw_to:
             return Response({"error" : "no recipient added"}, status=400)
         recipients = [e.strip() for e in raw_to.split(",") if e.strip()]
         results=[]
