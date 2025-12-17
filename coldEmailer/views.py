@@ -20,6 +20,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email import encoders
+from email.utils import make_msgid
 from googleapiclient.discovery import build
 from .models import GmailCredentials
 from django.contrib.auth.models import User
@@ -157,14 +158,7 @@ class sendEmail(APIView):
         body=request.POST.get("body")
         subject= request.POST.get("subject")
         file= request.FILES.get("file")
-        if file:
-            mime_part= MIMEBase('application', 'octet-stream')
-            mime_part.set_payload(file.read())
-            encoders.encode_base64(mime_part)
-            mime_part.add_header(
-                'content-disposition',
-                f'attachment; filename= "{file.name}"'
-            )
+            
 
         
         for email in recipients:
@@ -172,8 +166,16 @@ class sendEmail(APIView):
             message = MIMEMultipart()
             message["to"] = email
             message["subject"] = subject
+            message["Message-ID"]= make_msgid()
             message.attach(MIMEText(body, "html"))
             if file:
+                mime_part= MIMEBase('application', 'octet-stream')
+                mime_part.set_payload(file.read())
+                encoders.encode_base64(mime_part)
+                mime_part.add_header(
+                    'content-disposition',
+                    f'attachment; filename= "{file.name}"'
+                )
                 message.attach(mime_part)
 
             raw = base64.urlsafe_b64encode(message.as_bytes()).decode()
