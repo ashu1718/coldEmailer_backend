@@ -151,9 +151,10 @@ class sendEmail(APIView):
         service = build("gmail", "v1", credentials=creds)
 
         # Build email message
-        recipients= request.POST.getlist("to")
+        raw_to = request.POST.get("to", "")
         if not recipients:
             return Response({"error" : "no recipient added"}, status=400)
+        recipients = [e.strip() for e in raw_to.split(",") if e.strip()]
         results=[]
         body=request.POST.get("body")
         subject= request.POST.get("subject")
